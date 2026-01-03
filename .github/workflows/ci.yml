@@ -84,12 +84,9 @@ jobs:
     
     - name: Install dependencies
       run: uv sync
-    
-    - name: Install pyright
-      run: npm install -g pyright
-    
+
     - name: Run pyright
-      run: pyright pysms/
+      run: uv run pyright pysms/
 
   security:
     name: Security Scan

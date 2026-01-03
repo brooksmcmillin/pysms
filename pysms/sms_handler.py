@@ -6,7 +6,7 @@ import re
 import time
 import threading
 from dataclasses import dataclass
-from typing import Callable, List, Optional
+from typing import Callable
 import serial
 
 
@@ -35,16 +35,23 @@ class SMSHandler:
         self.port_name = port_name
         self.baud_rate = baud_rate
         self.debug = debug
-        self.serial_conn = None
+        self.serial_conn: serial.Serial | None = None
         self.listening = False
-        self._listen_thread = None
+        self._listen_thread: threading.Thread | None = None
         self._pause_event = threading.Event()
         self._resume_event = threading.Event()
         self._lock = threading.Lock()
-        
+
         # Initialize connection
         self._connect()
         self._init_modem()
+
+    @property
+    def _serial(self) -> serial.Serial:
+        """Get the serial connection, raising if not connected."""
+        if self.serial_conn is None:
+            raise RuntimeError("Serial connection not established")
+        return self.serial_conn
     
     def _connect(self):
         """Establish serial connection."""
@@ -88,8 +95,10 @@ class SMSHandler:
                 if "OK" in response:
                     success = True
                     break
-            except Exception:
-                continue
+            except Exception as e:
+                if self.debug:
+                    print(f"[DEBUG] Notification command {cmd} failed: {e}")
+                # Try the next notification command
         
         if not success:
             raise RuntimeError("Failed to enable SMS notifications")
@@ -110,20 +119,20 @@ class SMSHandler:
             
             try:
                 # Clear input buffer
-                self.serial_conn.reset_input_buffer()
-                
+                self._serial.reset_input_buffer()
+
                 # Send command
                 cmd_bytes = (command + "\r\n").encode()
-                self.serial_conn.write(cmd_bytes)
-                
+                self._serial.write(cmd_bytes)
+
                 # Read response
                 response = ""
                 start_time = time.time()
                 consecutive_empty = 0
-                
+
                 while time.time() - start_time < timeout:
-                    if self.serial_conn.in_waiting:
-                        line = self.serial_conn.readline().decode('utf-8', errors='ignore').strip()
+                    if self._serial.in_waiting:
+                        line = self._serial.readline().decode('utf-8', errors='ignore').strip()
                         
                         # Skip echo of command
                         if line == command:
@@ -194,41 +203,41 @@ class SMSHandler:
             
             try:
                 # Clear buffers
-                self.serial_conn.reset_input_buffer()
+                self._serial.reset_input_buffer()
                 time.sleep(0.1)
-                
+
                 # Start SMS composition
                 cmd = f'AT+CMGS="{phone_number}"'
-                self.serial_conn.write((cmd + "\r").encode())
-                
+                self._serial.write((cmd + "\r").encode())
+
                 # Wait for prompt
                 prompt_received = False
                 start_time = time.time()
-                
+
                 while time.time() - start_time < 10.0:
-                    if self.serial_conn.in_waiting:
-                        data = self.serial_conn.read(self.serial_conn.in_waiting).decode('utf-8', errors='ignore')
+                    if self._serial.in_waiting:
+                        data = self._serial.read(self._serial.in_waiting).decode('utf-8', errors='ignore')
                         if ">" in data:
                             prompt_received = True
                             break
                     time.sleep(0.1)
-                
+
                 if not prompt_received:
                     raise RuntimeError("Timeout waiting for SMS prompt")
-                
+
                 time.sleep(0.1)
-                
+
                 # Send message with Ctrl+Z terminator
                 full_message = message + "\x1A"
-                self.serial_conn.write(full_message.encode())
-                
+                self._serial.write(full_message.encode())
+
                 # Wait for response
                 response = ""
                 start_time = time.time()
-                
+
                 while time.time() - start_time < 30.0:
-                    if self.serial_conn.in_waiting:
-                        data = self.serial_conn.read(self.serial_conn.in_waiting).decode('utf-8', errors='ignore')
+                    if self._serial.in_waiting:
+                        data = self._serial.read(self._serial.in_waiting).decode('utf-8', errors='ignore')
                         response += data
                         
                         if "+CMGS:" in response or "OK" in response:
@@ -243,17 +252,17 @@ class SMSHandler:
             finally:
                 self._resume_listener()
     
-    def read_sms(self) -> List[SMS]:
+    def read_sms(self) -> list[SMS]:
         """Read all SMS messages."""
         response = self._send_at_command('AT+CMGL="ALL"')
         return self._parse_sms_list(response)
     
-    def read_new_sms(self) -> List[SMS]:
+    def read_new_sms(self) -> list[SMS]:
         """Read only unread SMS messages."""
         response = self._send_at_command('AT+CMGL="REC UNREAD"')
         return self._parse_sms_list(response)
     
-    def _parse_sms_list(self, response: str) -> List[SMS]:
+    def _parse_sms_list(self, response: str) -> list[SMS]:
         """Parse SMS list response."""
         messages = []
         lines = response.split('\n')
@@ -319,12 +328,12 @@ class SMSHandler:
                         time.sleep(0.1)
                     continue
                 
-                if not self.serial_conn.in_waiting:
+                if not self._serial.in_waiting:
                     time.sleep(0.1)
                     continue
-                
+
                 try:
-                    line = self.serial_conn.readline().decode('utf-8', errors='ignore').strip()
+                    line = self._serial.readline().decode('utf-8', errors='ignore').strip()
                     if not line:
                         continue
                     
@@ -405,9 +414,9 @@ class SMSHandler:
         if self.debug:
             print(f"[DEBUG] Reading message content...")
         while time.time() - start_time < 2.0:
-            if self.serial_conn.in_waiting:
+            if self._serial.in_waiting:
                 try:
-                    msg_line = self.serial_conn.readline().decode('utf-8', errors='ignore').strip()
+                    msg_line = self._serial.readline().decode('utf-8', errors='ignore').strip()
                     if self.debug:
                         print(f"[DEBUG] Message line: {repr(msg_line)}")
                     

@@ -24,7 +24,7 @@ class ChatUI:
             typer.echo(f"\r\033[K", nl=False)
             
             # Display the message with colors
-            typer.echo(f"📱 {sender} [{timestamp}]: {message}", color=typer.colors.GREEN)
+            typer.secho(f"📱 {sender} [{timestamp}]: {message}", fg=typer.colors.GREEN)
             
             # Redraw prompt
             typer.echo("> ", nl=False)
@@ -53,7 +53,7 @@ class ChatUI:
             self.sms_handler.send_sms(self.phone_number, message)
             return True
         except Exception as e:
-            typer.echo(f"❌ Failed to send message: {e}", color=typer.colors.RED)
+            typer.secho(f"❌ Failed to send message: {e}", fg=typer.colors.RED)
             return False
 
 
@@ -79,11 +79,11 @@ def main(
         typer.echo("  /quit or /exit - Exit the program")  
         typer.echo("  /multi - Enter multi-line mode (end with '.' on its own line)")
         if debug:
-            typer.echo("  🐛 [DEBUG MODE ENABLED - Will show detailed SMS processing info]", color=typer.colors.YELLOW)
+            typer.secho("  🐛 [DEBUG MODE ENABLED - Will show detailed SMS processing info]", fg=typer.colors.YELLOW)
         typer.echo("-" * 50)
         
     except Exception as e:
-        typer.echo(f"❌ Failed to initialize SMS handler: {e}", err=True, color=typer.colors.RED)
+        typer.secho(f"❌ Failed to initialize SMS handler: {e}", err=True, fg=typer.colors.RED)
         raise typer.Exit(1)
     
     # Create chat UI
@@ -127,7 +127,7 @@ def main(
                     if lines:
                         multi_message = "\n".join(lines)
                         if not chat.send_message(multi_message):
-                            typer.echo("❌ Error sending message", color=typer.colors.RED)
+                            typer.secho("❌ Error sending message", fg=typer.colors.RED)
                     
                     typer.echo("> ", nl=False)
                     continue
@@ -137,7 +137,7 @@ def main(
                     continue
                 
                 if not chat.send_message(user_input):
-                    typer.echo("❌ Error sending message", color=typer.colors.RED)
+                    typer.secho("❌ Error sending message", fg=typer.colors.RED)
                 
                 typer.echo("> ", nl=False)
                 

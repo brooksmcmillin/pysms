@@ -30,7 +30,7 @@ jobs:
       run: uv python install ${{ matrix.python-version }}
     
     - name: Install dependencies
-      run: uv sync --extra dev
+      run: uv sync
     
     - name: Run tests with coverage
       run: uv run pytest --cov=pysms --cov-report=xml --cov-report=term-missing
@@ -59,7 +59,7 @@ jobs:
       run: uv python install 3.11
     
     - name: Install dependencies
-      run: uv sync --extra dev
+      run: uv sync
     
     - name: Run ruff linter
       run: uv run ruff check --output-format=github .
@@ -83,7 +83,7 @@ jobs:
       run: uv python install 3.11
     
     - name: Install dependencies
-      run: uv sync --extra dev
+      run: uv sync
     
     - name: Install pyright
       run: npm install -g pyright
@@ -107,22 +107,20 @@ jobs:
       run: uv python install 3.11
     
     - name: Install dependencies
-      run: uv sync --extra dev
+      run: uv sync
     
     - name: Run bandit security linter
       run: |
-        uv add --dev bandit[toml]
         uv run bandit -r pysms/ -f json -o bandit-report.json || true
         uv run bandit -r pysms/
-    
+
     - name: Run safety check for known vulnerabilities
       run: |
-        uv add --dev safety
         uv run safety check --json --output safety-report.json || true
         uv run safety check
     
     - name: Upload security scan results
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       if: always()
       with:
         name: security-reports
@@ -183,16 +181,17 @@ jobs:
     - name: Set up Python
       run: uv python install 3.11
     
+    - name: Install dependencies
+      run: uv sync
+
     - name: Build package
       run: uv build
-    
+
     - name: Check package
-      run: |
-        uv add --dev twine
-        uv run twine check dist/*
+      run: uv run twine check dist/*
     
     - name: Upload build artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: dist
         path: dist/
@@ -214,11 +213,10 @@ jobs:
     - name: Set up Python
       run: uv python install 3.11
     
-    - name: Install package in editable mode
-      run: uv pip install -e .
-    
+    - name: Install dependencies
+      run: uv sync
+
     - name: Test package installation
       run: |
         uv build
-        uv pip install dist/*.whl --force-reinstall
-        python -c "import pysms; print('Package install successful')"
+        uv run python -c "import pysms; print('Package install successful')"

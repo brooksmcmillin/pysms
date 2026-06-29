@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "pyserial>=3.5",
-    "typer>=0.26.7",
+    "typer>=0.26.8",
 ]
 
 [dependency-groups]

@@ -18,7 +18,7 @@ dev = [
     "twine>=6.2.0",
     "ruff>=0.15.18",
     "pytest-cov>=7.1.0",
-    "pyright>=1.1.410",
+    "pyright>=1.1.411",
 ]
 
 [project.scripts]

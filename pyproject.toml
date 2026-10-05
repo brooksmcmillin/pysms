@@ -16,7 +16,7 @@ dev = [
     "flake8>=7.4.1",
     "bandit[toml]>=1.9.4",
     "twine>=7.0.0",
-    "ruff>=0.16.9",
+    "ruff>=0.16.10",
     "pytest-cov>=7.1.0",
     "pyright>=1.1.414",
 ]
